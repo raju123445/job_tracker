@@ -6,6 +6,7 @@ import { MapPin, Clock, ExternalLink, Bookmark, BookmarkCheck, Eye } from "lucid
 
 interface JobCardProps {
   job: Job;
+  matchScore?: number; // Optional match score to display
   isSaved: boolean;
   onSave: (id: string) => void;
   onView: (job: Job) => void;
@@ -17,13 +18,20 @@ const sourceColor: Record<string, string> = {
   Indeed: "bg-warning/10 text-warning border-warning/20",
 };
 
+const getMatchScoreColor = (score: number) => {
+  if (score >= 80) return "bg-green-100 text-green-800 border-green-200";
+  if (score >= 60) return "bg-amber-100 text-amber-800 border-amber-200";
+  if (score >= 40) return "bg-gray-100 text-gray-800 border-gray-200";
+  return "bg-gray-50 text-gray-500 border-gray-100";
+};
+
 const formatPosted = (days: number) => {
   if (days === 0) return "Today";
   if (days === 1) return "1 day ago";
   return `${days} days ago`;
 };
 
-const JobCard = ({ job, isSaved, onSave, onView }: JobCardProps) => {
+const JobCard = ({ job, matchScore, isSaved, onSave, onView }: JobCardProps) => {
   return (
     <Card className="p-3 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
@@ -35,12 +43,22 @@ const JobCard = ({ job, isSaved, onSave, onView }: JobCardProps) => {
             {job.company}
           </p>
         </div>
-        <Badge
-          variant="outline"
-          className={`shrink-0 text-xs ${sourceColor[job.source] || ""}`}
-        >
-          {job.source}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          {matchScore !== undefined && (
+            <Badge
+              variant="outline"
+              className={`shrink-0 text-xs ${getMatchScoreColor(matchScore)}`}
+            >
+              Match: {matchScore}%
+            </Badge>
+          )}
+          <Badge
+            variant="outline"
+            className={`shrink-0 text-xs ${sourceColor[job.source] || ""}`}
+          >
+            {job.source}
+          </Badge>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-1 text-small text-muted-foreground">

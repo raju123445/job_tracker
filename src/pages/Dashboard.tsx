@@ -1,10 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { jobs } from "@/data/jobs";
 import { Job } from "@/types/job";
 import { useSavedJobs } from "@/hooks/use-saved-jobs";
 import JobCard from "@/components/JobCard";
 import JobDetailModal from "@/components/JobDetailModal";
 import FilterBar, { Filters } from "@/components/FilterBar";
+import { calculateMatchScore, Preferences } from "@/utils/match-score";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const defaultFilters: Filters = {
   keyword: "",
@@ -18,36 +21,85 @@ const defaultFilters: Filters = {
 const Dashboard = () => {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [viewJob, setViewJob] = useState<Job | null>(null);
+  const [preferences, setPreferences] = useState<Preferences | null>(null);
+  const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const { isSaved, toggleSave } = useSavedJobs();
 
-  const filtered = useMemo(() => {
-    let result = [...jobs];
+  // Load preferences from localStorage
+  useEffect(() => {
+    const savedPreferences = localStorage.getItem('jobTrackerPreferences');
+    if (savedPreferences) {
+      try {
+        const parsedPreferences = JSON.parse(savedPreferences);
+        setPreferences(parsedPreferences);
+      } catch (error) {
+        console.error('Failed to parse preferences from localStorage:', error);
+        setPreferences(null);
+      }
+    }
+  }, []);
 
+  // Calculate match scores for all jobs
+  const jobsWithScores = useMemo(() => {
+    if (!preferences) return jobs.map(job => ({ job, matchScore: 0 }));
+
+    return jobs.map(job => ({
+      job,
+      matchScore: calculateMatchScore(job, preferences)
+    }));
+  }, [jobs, preferences]);
+
+  // Apply filters and sorting
+  const filtered = useMemo(() => {
+    let result = [...jobsWithScores];
+
+    // Apply keyword filter
     if (filters.keyword) {
       const kw = filters.keyword.toLowerCase();
       result = result.filter(
-        (j) =>
-          j.title.toLowerCase().includes(kw) ||
-          j.company.toLowerCase().includes(kw)
+        ({ job }) =>
+          job.title.toLowerCase().includes(kw) ||
+          job.company.toLowerCase().includes(kw)
       );
     }
-    if (filters.location !== "All")
-      result = result.filter((j) => j.location === filters.location);
-    if (filters.mode !== "All")
-      result = result.filter((j) => j.mode === filters.mode);
-    if (filters.experience !== "All")
-      result = result.filter((j) => j.experience === filters.experience);
-    if (filters.source !== "All")
-      result = result.filter((j) => j.source === filters.source);
 
-    result.sort((a, b) =>
-      filters.sort === "Latest"
-        ? a.postedDaysAgo - b.postedDaysAgo
-        : b.postedDaysAgo - a.postedDaysAgo
-    );
+    // Apply location filter
+    if (filters.location !== "All")
+      result = result.filter(({ job }) => job.location === filters.location);
+
+    // Apply mode filter
+    if (filters.mode !== "All")
+      result = result.filter(({ job }) => job.mode === filters.mode);
+
+    // Apply experience filter
+    if (filters.experience !== "All")
+      result = result.filter(({ job }) => job.experience === filters.experience);
+
+    // Apply source filter
+    if (filters.source !== "All")
+      result = result.filter(({ job }) => job.source === filters.source);
+
+    // Apply match score filter if toggle is enabled
+    if (showOnlyMatches && preferences) {
+      result = result.filter(({ matchScore }) => matchScore >= preferences.minMatchScore);
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      if (filters.sort === "Latest") {
+        return a.job.postedDaysAgo - b.job.postedDaysAgo;
+      } else if (filters.sort === "Match Score") {
+        return b.matchScore - a.matchScore; // Higher scores first
+      } else {
+        return b.job.postedDaysAgo - a.job.postedDaysAgo; // Oldest first
+      }
+    });
 
     return result;
-  }, [filters]);
+  }, [jobsWithScores, filters, showOnlyMatches, preferences]);
+
+  // Update FilterBar sorts to include Match Score
+  const sorts = ["Latest", "Oldest", "Match Score"];
 
   return (
     <div className="flex-1 bg-background px-3 py-3 overflow-y-auto">
@@ -57,22 +109,55 @@ const Dashboard = () => {
           {filtered.length} job{filtered.length !== 1 ? "s" : ""} found
         </p>
 
-        <div className="mt-3">
-          <FilterBar filters={filters} onChange={setFilters} />
+        {/* Show banner if preferences not set */}
+        {!preferences && (
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              Set your preferences to activate intelligent matching.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <FilterBar
+            filters={{...filters, sort: filters.sort}}
+            onChange={setFilters}
+            sorts={sorts} // Pass updated sorts
+          />
+
+          {preferences && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-only-matches"
+                checked={showOnlyMatches}
+                onCheckedChange={setShowOnlyMatches}
+              />
+              <Label htmlFor="show-only-matches" className="text-sm">
+                Show only jobs above my threshold
+              </Label>
+            </div>
+          )}
         </div>
 
         {filtered.length === 0 ? (
           <div className="mt-5 text-center">
-            <p className="text-body text-muted-foreground">
-              No jobs match your current filters. Try broadening your search.
-            </p>
+            {preferences && showOnlyMatches ? (
+              <p className="text-body text-muted-foreground">
+                No roles match your criteria. Adjust filters or lower threshold.
+              </p>
+            ) : (
+              <p className="text-body text-muted-foreground">
+                No jobs match your current filters. Try broadening your search.
+              </p>
+            )}
           </div>
         ) : (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {filtered.map((job) => (
+            {filtered.map(({ job, matchScore }) => (
               <JobCard
                 key={job.id}
                 job={job}
+                matchScore={matchScore}
                 isSaved={isSaved(job.id)}
                 onSave={toggleSave}
                 onView={setViewJob}

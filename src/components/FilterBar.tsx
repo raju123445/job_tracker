@@ -19,15 +19,16 @@ export interface Filters {
 interface FilterBarProps {
   filters: Filters;
   onChange: (filters: Filters) => void;
+  sorts?: string[]; // Allow custom sorts to be passed in
 }
 
 const locations = ["All", "Bangalore", "Chennai", "Hyderabad", "Pune", "Mumbai", "Mysore", "Noida"];
 const modes = ["All", "Remote", "Hybrid", "Onsite"];
 const experiences = ["All", "Fresher", "0-1", "1-3", "3-5"];
 const sources = ["All", "LinkedIn", "Naukri", "Indeed"];
-const sorts = ["Latest", "Oldest"];
+const defaultSorts = ["Latest", "Oldest"];
 
-const FilterBar = ({ filters, onChange }: FilterBarProps) => {
+const FilterBar = ({ filters, onChange, sorts = defaultSorts }: FilterBarProps) => {
   const set = (key: keyof Filters, value: string) =>
     onChange({ ...filters, [key]: value });
 
