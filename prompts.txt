@@ -1,0 +1,94 @@
+Upgrade Job Notification Tracker with persistent job status tracking and notification templates.
+
+NON-NEGOTIABLE:
+- Do NOT change routes.
+- Do NOT remove existing features.
+- Persist everything in localStorage.
+- No UI drift.
+
+------------------------------------------
+1) IMPLEMENT JOB STATUS TRACKING
+------------------------------------------
+
+On each job card (in /dashboard and /saved):
+
+Add status button group:
+
+Default:
+"Not Applied"
+
+Other states:
+- Applied
+- Rejected
+- Selected
+
+When user changes status:
+- Store in localStorage:
+  jobTrackerStatus[jobId] = status
+- Reflect visually with badge color:
+   Not Applied → neutral
+   Applied → blue
+   Rejected → red
+   Selected → green
+
+Status must persist after refresh.
+
+------------------------------------------
+2) ADD STATUS FILTER
+------------------------------------------
+
+Add dropdown filter on /dashboard:
+Filter by:
+- All
+- Not Applied
+- Applied
+- Rejected
+- Selected
+
+Filtering must combine with existing filters (AND logic).
+
+------------------------------------------
+3) SIMULATED NOTIFICATION TEMPLATE
+------------------------------------------
+
+When status changes to:
+- Applied
+- Rejected
+- Selected
+
+Show a small toast:
+"Status updated: {status}"
+
+On /digest page:
+Add section:
+"Recent Status Updates"
+
+List:
+- Job title
+- Company
+- Status
+- Date changed
+
+------------------------------------------
+4) EDGE CASES
+------------------------------------------
+
+If no status exists:
+Assume "Not Applied".
+
+If user clears localStorage:
+All status resets cleanly.
+
+------------------------------------------
+5) OUTPUT REQUIRED
+------------------------------------------
+
+Return:
+
+1) Confirmation status persists after refresh.
+2) Confirmation filter logic works with status + matchScore + other filters.
+3) Verification steps:
+   - Change status
+   - Refresh
+   - Filter by that status
+   - Confirm correct jobs show

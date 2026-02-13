@@ -13,6 +13,7 @@ export interface Filters {
   mode: string;
   experience: string;
   source: string;
+  status: string; // Added status filter
   sort: string;
 }
 
@@ -26,6 +27,7 @@ const locations = ["All", "Bangalore", "Chennai", "Hyderabad", "Pune", "Mumbai",
 const modes = ["All", "Remote", "Hybrid", "Onsite"];
 const experiences = ["All", "Fresher", "0-1", "1-3", "3-5"];
 const sources = ["All", "LinkedIn", "Naukri", "Indeed"];
+const statuses = ["All", "Not Applied", "Applied", "Rejected", "Selected"]; // Added statuses
 const defaultSorts = ["Latest", "Oldest"];
 
 const FilterBar = ({ filters, onChange, sorts = defaultSorts }: FilterBarProps) => {
@@ -82,6 +84,17 @@ const FilterBar = ({ filters, onChange, sorts = defaultSorts }: FilterBarProps) 
         </SelectTrigger>
         <SelectContent className="bg-card z-50">
           {sources.map((s) => (
+            <SelectItem key={s} value={s}>{s}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.status} onValueChange={(v) => set("status", v)}>
+        <SelectTrigger className="w-[140px] h-4 bg-card">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent className="bg-card z-50">
+          {statuses.map((s) => (
             <SelectItem key={s} value={s}>{s}</SelectItem>
           ))}
         </SelectContent>
