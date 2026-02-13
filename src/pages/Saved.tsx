@@ -2,6 +2,7 @@ import { useState } from "react";
 import { jobs } from "@/data/jobs";
 import { Job } from "@/types/job";
 import { useSavedJobs } from "@/hooks/use-saved-jobs";
+import { useJobStatus } from "@/hooks/use-job-status";
 import JobCard from "@/components/JobCard";
 import JobDetailModal from "@/components/JobDetailModal";
 import { Bookmark } from "lucide-react";

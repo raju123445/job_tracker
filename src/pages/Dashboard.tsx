@@ -2,12 +2,14 @@ import { useState, useMemo, useEffect } from "react";
 import { jobs } from "@/data/jobs";
 import { Job } from "@/types/job";
 import { useSavedJobs } from "@/hooks/use-saved-jobs";
+import { useJobStatus, JobStatus } from "@/hooks/use-job-status";
 import JobCard from "@/components/JobCard";
 import JobDetailModal from "@/components/JobDetailModal";
 import FilterBar, { Filters } from "@/components/FilterBar";
 import { calculateMatchScore, Preferences } from "@/utils/match-score";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const defaultFilters: Filters = {
   keyword: "",
@@ -15,6 +17,7 @@ const defaultFilters: Filters = {
   mode: "All",
   experience: "All",
   source: "All",
+  status: "All", // Added status filter
   sort: "Latest",
 };
 
@@ -24,6 +27,7 @@ const Dashboard = () => {
   const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const { isSaved, toggleSave } = useSavedJobs();
+  const { getStatus } = useJobStatus();
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -79,6 +83,10 @@ const Dashboard = () => {
     if (filters.source !== "All")
       result = result.filter(({ job }) => job.source === filters.source);
 
+    // Apply status filter
+    if (filters.status !== "All")
+      result = result.filter(({ job }) => getStatus(job.id) === filters.status);
+
     // Apply match score filter if toggle is enabled
     if (showOnlyMatches && preferences) {
       result = result.filter(({ matchScore }) => matchScore >= preferences.minMatchScore);
@@ -96,7 +104,7 @@ const Dashboard = () => {
     });
 
     return result;
-  }, [jobsWithScores, filters, showOnlyMatches, preferences]);
+  }, [jobsWithScores, filters, showOnlyMatches, preferences, getStatus]);
 
   // Update FilterBar sorts to include Match Score
   const sorts = ["Latest", "Oldest", "Match Score"];
@@ -152,7 +160,7 @@ const Dashboard = () => {
             )}
           </div>
         ) : (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-5 grid gap-4 md:gap-5 grid-cols-1 sm:grid-cols-2">
             {filtered.map(({ job, matchScore }) => (
               <JobCard
                 key={job.id}

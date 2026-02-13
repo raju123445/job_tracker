@@ -4,9 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { jobs } from "@/data/jobs";
 import { Job } from "@/types/job";
 import { calculateMatchScore, Preferences } from "@/utils/match-score";
-import { Clock, Copy, Mail, MailIcon, MapPin } from "lucide-react";
+import { Clock, Copy, Mail, MailIcon, MapPin, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useJobStatus, JobStatus } from "@/hooks/use-job-status";
 
 interface JobWithScore {
   job: Job;
@@ -360,6 +361,16 @@ const Digest = () => {
           )}
         </div>
 
+        {/* Recent Status Updates Section */}
+        <div className="mt-10 pt-8 border-t border-gray-200">
+          <h2 className="font-serif text-xl md:text-2xl text-foreground mb-4 flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Recent Status Updates
+          </h2>
+          
+          <StatusUpdatesSection />
+        </div>
+
         {/* Demo Mode Note */}
         <div className="mt-4 text-center">
           <p className="text-xs text-muted-foreground">
@@ -367,6 +378,72 @@ const Digest = () => {
           </p>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Component to display recent status updates
+const StatusUpdatesSection = () => {
+  const { getAllStatuses } = useJobStatus();
+  
+  // Get all jobs with non-default statuses
+  const statusUpdates = Object.entries(getAllStatuses())
+    .filter(([_, status]) => status !== "Not Applied")
+    .map(([jobId, status]) => {
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) return null;
+      
+      return {
+        job,
+        status,
+        date: new Date().toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 5); // Show only the 5 most recent updates
+
+  if (statusUpdates.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No status updates yet. Update job statuses to see them here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {statusUpdates.map((update, index) => (
+        <div 
+          key={`${update.job.id}-${index}`} 
+          className="flex items-center justify-between p-3 bg-card rounded-lg border border-border"
+        >
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-foreground truncate">{update.job.title}</h3>
+            <p className="text-sm text-muted-foreground truncate">{update.job.company}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge 
+              variant="outline"
+              className={
+                update.status === "Applied" ? "bg-blue-100 text-blue-800 border-blue-200" :
+                update.status === "Rejected" ? "bg-red-100 text-red-800 border-red-200" :
+                update.status === "Selected" ? "bg-green-100 text-green-800 border-green-200" :
+                "bg-gray-100 text-gray-800 border-gray-200"
+              }
+            >
+              {update.status}
+            </Badge>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {update.date}
+            </span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
